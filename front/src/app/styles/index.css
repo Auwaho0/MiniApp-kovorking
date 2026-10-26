@@ -1,0 +1,114 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   Палитра.
+   --tg-* — «системные» токены, максимально похожие на Telegram-тему.
+   --c-*  — брендовые акценты.
+   `inline` — обязательно, чтобы .dark мог переопределять.
+--------------------------------------------------------------------------- */
+@theme inline {
+  /* Telegram-like */
+  --color-tg-bg: var(--tg-bg);
+  --color-tg-secondary: var(--tg-secondary-bg);
+  --color-tg-text: var(--tg-text);
+  --color-tg-hint: var(--tg-hint);
+  --color-tg-button: var(--tg-button);
+  --color-tg-button-text: var(--tg-button-text);
+  --color-tg-link: var(--tg-link);
+
+  /* Брендовые (для акцентов) */
+  --color-app: var(--c-app);
+  --color-surface: var(--c-surface);
+  --color-card: var(--c-card);
+  --color-line: var(--c-line);
+  --color-main: var(--c-main);
+  --color-dim: var(--c-dim);
+  --color-mute: var(--c-mute);
+  --color-gold: var(--c-gold);
+  --color-gold-dim: var(--c-gold-dim);
+  --color-blood: var(--c-blood);
+}
+
+/* Светлая тема (по умолчанию) */
+:root {
+  --tg-bg: #f7f6f2;
+  --tg-secondary-bg: #ebe7df;
+  --tg-text: #1c1a17;
+  --tg-hint: #68635c;
+  --tg-button: #a1815a;
+  --tg-button-text: #ffffff;
+  --tg-link: #a1815a;
+
+  --c-app: #e8e5dc;
+  --c-surface: #f7f6f2;
+  --c-card: #ffffff;
+  --c-line: #ded8cb;
+  --c-main: #1c1a17;
+  --c-dim: #68635c;
+  --c-mute: #958e85;
+  --c-gold: #a1815a;
+  --c-gold-dim: #8d6f4a;
+  --c-blood: #8b0000;
+
+  color-scheme: light;
+}
+
+/* Тёмная тема — .dark на <html> */
+.dark {
+  --tg-bg: #0a0a0a;
+  --tg-secondary-bg: #1a1a1a;
+  --tg-text: #f0ebe4;
+  --tg-hint: #898989;
+  --tg-button: #e4f830;
+  --tg-button-text: #0a0a0a;
+  --tg-link: #bba68d;
+
+  --c-app: #080808;
+  --c-surface: #0a0a0a;
+  --c-card: #0d0d0d;
+  --c-line: #2a2a2a;
+  --c-main: #f0ebe4;
+  --c-dim: #898989;
+  --c-mute: #4a4a4a;
+  --c-gold: #bba68d;
+  --c-gold-dim: #a89681;
+  --c-blood: #8b0000;
+
+  color-scheme: dark;
+}
+
+/* Плавная смена темы для базовых элементов */
+@layer base {
+  html {
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+
+  body {
+    background-color: var(--tg-bg);
+    color: var(--tg-text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
