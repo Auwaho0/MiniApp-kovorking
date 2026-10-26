@@ -10,8 +10,11 @@ import { NotifyWaitlistButton } from "@/features/notifyWaitlist/ui/NotifyWaitlis
 import { JoinWaitlistButton } from "@/features/joinWaitlist/ui/JoinWaitlistButton";
 import { CreateBookingModal } from "@/features/createBooking/ui/CreateBookingModal";
 import { setBackButton } from "@/shared/lib/telegram";
-import { formatMoscow, getSlotOccupancy } from "@/shared/lib/date";
-import { TIME_SLOTS } from "@/shared/config/constants";
+import {
+  formatMoscow,
+  formatTimeRange,
+  hasFreeWindow,
+} from "@/shared/lib/date";
 
 type Props = {
   open: boolean;
@@ -23,7 +26,7 @@ type Props = {
 export function DayBookingsModal({ open, date, bookings, onClose }: Props) {
   const { data: me } = useMe();
   const { data: myWaitlist } = useMyWaitlist();
-  const [createSlotId, setCreateSlotId] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -43,60 +46,41 @@ export function DayBookingsModal({ open, date, bookings, onClose }: Props) {
 
   if (!date) return null;
 
-  const slots = getSlotOccupancy(date, bookings, TIME_SLOTS);
-  const busyCount = slots.filter((s) => s.booking).length;
-  const allBusy = busyCount === slots.length;
+  const sorted = [...bookings].sort((a, b) =>
+    a.startAt.localeCompare(b.startAt),
+  );
 
   const myEntry = myWaitlist?.find((w) => w.date === date);
   const isAdmin = me?.isAdmin ?? false;
+  const hasFree = hasFreeWindow(sorted);
 
   return (
     <>
       <Modal open={open} onClose={onClose} title={dateTitle}>
-        <div className="space-y-2">
-          {slots.map(({ slot, booking }) => {
-            const isMine = booking?.userId === me?.id;
-            const canDelete = booking && (isAdmin || isMine);
-
-            return (
-              <div
-                key={slot.id}
-                className="rounded-xl border border-tg-secondary p-3"
-              >
-                <div className="mb-2 flex items-center justify-between">
-                  <div className="text-sm font-semibold text-tg-text">
-                    {slot.label}
+        <div className="space-y-3">
+          {sorted.length === 0 ? (
+            <p className="text-sm text-tg-hint">Пока никто не записан.</p>
+          ) : (
+            sorted.map((b) => {
+              const isMine = b.userId === me?.id;
+              const canDelete = isAdmin || isMine;
+              return (
+                <div key={b.id} className="space-y-2">
+                  <div className="text-xs text-tg-hint">
+                    {formatTimeRange(b.startAt, b.endAt)}
                   </div>
-                  {booking ? (
-                    <span className="text-xs text-tg-hint">занято</span>
-                  ) : (
-                    <span className="text-xs text-emerald-500">свободно</span>
+                  <BookingChip booking={b} />
+                  {canDelete && (
+                    <DeleteBookingButton id={b.id} onDone={onClose} />
                   )}
                 </div>
+              );
+            })
+          )}
 
-                {booking ? (
-                  <div className="space-y-2">
-                    <BookingChip booking={booking} />
-                    {canDelete && (
-                      <DeleteBookingButton id={booking.id} onDone={onClose} />
-                    )}
-                  </div>
-                ) : (
-                  <Button
-                    variant="secondary"
-                    onClick={() => setCreateSlotId(slot.id)}
-                  >
-                    ➕ Записаться
-                  </Button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {(allBusy || isAdmin) && (
-          <div className="mt-4 space-y-2 border-t border-tg-secondary pt-4">
-            {allBusy && (
+          <div className="space-y-2 pt-2 border-t border-tg-secondary">
+            <Button onClick={() => setCreateOpen(true)}>➕ Записаться</Button>
+            {!hasFree && (
               <JoinWaitlistButton
                 date={date}
                 alreadyIn={!!myEntry}
@@ -105,14 +89,14 @@ export function DayBookingsModal({ open, date, bookings, onClose }: Props) {
             )}
             {isAdmin && <NotifyWaitlistButton date={date} />}
           </div>
-        )}
+        </div>
       </Modal>
 
       <CreateBookingModal
-        open={createSlotId !== null}
-        onClose={() => setCreateSlotId(null)}
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
         initialDate={date}
-        initialSlotId={createSlotId ?? undefined}
+        dayBookings={sorted}
       />
     </>
   );

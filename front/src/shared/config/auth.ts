@@ -2,7 +2,7 @@
 // Совпадение по ЛЮБОМУ полю (id ИЛИ username) — доступ разрешён.
 // Username сравнивается без учёта регистра (и без @).
 export const ALLOWED_USERS: Array<{ id?: number; username?: string }> = [
-  { id: 123456789, username: "Artem_Masloy" },
+  { id: 6092640456, username: "Artem_Masloy" },
   { username: "Masloy_Artem" }
 ];
 

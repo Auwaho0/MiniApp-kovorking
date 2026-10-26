@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, time
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -14,6 +14,12 @@ from ..telegram_api import send_message
 
 router = APIRouter()
 MSK = ZoneInfo("Europe/Moscow")
+
+# Рабочие часы и минимальная длительность — синхронизированы с фронтом
+# (front/src/shared/config/constants.ts)
+WORK_START = time(10, 0)
+WORK_END = time(21, 0)
+MIN_DURATION_MIN = 60
 
 
 def _month_range(month: str) -> tuple[datetime, datetime]:
@@ -61,22 +67,34 @@ async def create_booking(
     user: dict = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> dict:
+    # 1) Базовая проверка порядка
     if payload.end_at <= payload.start_at:
         raise HTTPException(400, "end_at must be after start_at")
 
-    day = payload.start_at.astimezone(MSK).date()
-    end_day = payload.end_at.astimezone(MSK).date()
-    while day <= end_day:
-        day_start = datetime(day.year, day.month, day.day, tzinfo=MSK)
-        day_end = datetime(day.year, day.month, day.day, 23, 59, 59, tzinfo=MSK)
-        stmt = select(Booking).where(
-            and_(Booking.start_at <= day_end, Booking.end_at >= day_start)
-        )
-        existing = (await session.execute(stmt)).scalars().all()
-        if len(existing) >= settings.DAILY_CAPACITY:
-            raise HTTPException(409, f"Нет мест на {day.isoformat()}")
-        day = day.fromordinal(day.toordinal() + 1)
+    # 2) Приводим к МСК и проверяем:
+    #    - запись не переходит через полночь
+    #    - в пределах рабочих часов
+    #    - длительность >= MIN_DURATION_MIN
+    start_msk = payload.start_at.astimezone(MSK)
+    end_msk = payload.end_at.astimezone(MSK)
 
+    if start_msk.date() != end_msk.date():
+        raise HTTPException(400, "Запись должна быть в пределах одного дня")
+
+    if start_msk.time() < WORK_START or end_msk.time() > WORK_END:
+        raise HTTPException(400, "Вне рабочих часов (10:00–21:00 МСК)")
+
+    if (end_msk - start_msk).total_seconds() < MIN_DURATION_MIN * 60:
+        raise HTTPException(400, f"Минимум {MIN_DURATION_MIN} минут")
+
+    # 3) Пересечение с существующей записью
+    overlap_stmt = select(Booking).where(
+        and_(Booking.start_at < payload.end_at, Booking.end_at > payload.start_at)
+    )
+    if (await session.execute(overlap_stmt)).scalars().first():
+        raise HTTPException(409, "Этот интервал уже занят")
+
+    # 4) Создание
     booking = Booking(
         user_id=user["id"],
         username=user["username"],

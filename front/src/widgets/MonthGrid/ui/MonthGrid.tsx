@@ -4,10 +4,9 @@ import {
   daysInMonth,
   firstWeekdayMonday,
   getDateKeyMoscow,
-  getSlotOccupancy,
+  WEEKDAYS_RU,
 } from "@/shared/lib/date";
 import { hapticLight } from "@/shared/lib/telegram";
-import { TIME_SLOTS } from "@/shared/config/constants";
 import type { MonthRef } from "@/widgets/MonthTabs/ui/MonthTabs";
 
 type Props = {
@@ -17,11 +16,7 @@ type Props = {
 };
 
 function bookingsForDay(bookings: Booking[], date: string) {
-  return bookings.filter((b) => {
-    const start = getDateKeyMoscow(b.startAt);
-    const end = getDateKeyMoscow(b.endAt);
-    return date >= start && date <= end;
-  });
+  return bookings.filter((b) => getDateKeyMoscow(b.startAt) === date);
 }
 
 export function MonthGrid({ month, bookings, onDayClick }: Props) {
@@ -34,17 +29,19 @@ export function MonthGrid({ month, bookings, onDayClick }: Props) {
 
   return (
     <div className="px-2 pb-4">
+      <div className="mb-1 grid grid-cols-7 gap-1 px-2">
+        {WEEKDAYS_RU.map((d) => (
+          <div key={d} className="text-center text-[11px] font-medium text-tg-hint">
+            {d}
+          </div>
+        ))}
+      </div>
       <div className="grid grid-cols-7 gap-1">
         {cells.map((day, i) => {
           if (day === null) return <div key={i} />;
           const key = dateKey(month.year, month.month, day);
           const list = bookingsForDay(bookings, key);
-
-          const occupancy = getSlotOccupancy(key, list, TIME_SLOTS);
-          const busyCount = occupancy.filter((o) => o.booking).length;
-          const totalSlots = occupancy.length;
-          const isFull = busyCount === totalSlots;
-          const isPartial = busyCount > 0 && !isFull;
+          const busy = list.length > 0;
 
           return (
             <button
@@ -54,16 +51,23 @@ export function MonthGrid({ month, bookings, onDayClick }: Props) {
                 onDayClick(key, list);
               }}
               className={`flex aspect-[3/4] flex-col items-center justify-start rounded-lg p-1 text-xs
-                transition active:scale-95 ${isFull
+                transition active:scale-95 ${busy
                   ? "bg-tg-secondary"
-                  : isPartial
-                    ? "bg-tg-secondary/50"
-                    : "bg-tg-bg ring-1 ring-tg-secondary"
+                  : "bg-tg-bg ring-1 ring-tg-secondary"
                 }`}
             >
               <span className="font-medium text-tg-text">{day}</span>
-              <div className="mt-auto text-[10px] text-tg-hint">
-                {busyCount}/{totalSlots}
+              <div className="mt-auto flex gap-0.5 pb-0.5">
+                {list.slice(0, 3).map((b) => (
+                  <div
+                    key={b.id}
+                    className="h-1.5 w-1.5 rounded-full"
+                    style={{ background: b.background }}
+                  />
+                ))}
+                {list.length > 3 && (
+                  <div className="h-1.5 w-1.5 rounded-full bg-tg-hint" />
+                )}
               </div>
             </button>
           );

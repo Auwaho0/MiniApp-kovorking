@@ -5,9 +5,8 @@ class Settings(BaseSettings):
     BOT_TOKEN: str
     DATABASE_URL: str
     ADMIN_IDS: str = ""
-    DAILY_CAPACITY: int = 3
     MINI_APP_URL: str
-    CORS_ORIGINS: str = "*"
+    CORS_ORIGINS: str = "*" 
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
